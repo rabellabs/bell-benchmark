@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+out/
+*.jsonl
+sched_*.json
+data/
+work/
