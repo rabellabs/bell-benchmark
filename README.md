@@ -9,24 +9,28 @@ Bell's guesses come from the Rabel API itself, with your key. Nothing in this re
 
 ## The results
 
-Rabel's published numbers, and a rerun of this repository's scripts and data on 22 November 2026.
+A run of this repository's scripts and data on 26 November 2026, against the Rabel API's public address with
+`livekit-plugins-rabel` 1.9.0 from PyPI, beside the numbers Rabel published for 1.8.13.
 
-| | Rabel's published run | The rerun of 22 November 2026 |
+| | livekit-plugins-rabel 1.9.0, 26 November 2026 | 1.8.13, Rabel's published run |
 |---|---|---|
-| Bell's answer time | about 32 ms, from a stand-in for the API inside the process | the API's real round trip, median 2.4 ms, from a machine in the API's own cloud region |
-| LiveKit's default alone, then with Bell | 118 ms a turn sooner [108, 128], 0.11 more LLM calls a turn | 122 [111, 133], 0.11 |
-| Bell alone against no early start, in LiveKit | 161 [150, 172], 0.09 | 167 [156, 178], 0.09 |
-| Bell alone against no early start, in Pipecat 1.16.0 | 170 [159, 182], 0.07 | 176 [164, 187], 0.07 |
-| The curve, after 0, 12, 24, 48, 100, 300 and 1,070 calls taught | silent, 9, 44, 72, 94, 102, 118 | silent, 10, 46, 73, 96, 105, 122 |
+| Bell's answer time | the API's real round trip, median 3.6 ms, from a machine in the API's own cloud region | about 32 ms, from a stand-in for the API inside the process |
+| LiveKit's default alone, then with Bell | 174 ms a turn sooner [161, 186], 0.41 more LLM calls a turn | 118 [108, 128], 0.11 |
+| Bell alone against no early start, in LiveKit | 270 [256, 284], 0.31 | 161 [150, 172], 0.09 |
+| Bell alone against no early start, in Pipecat 1.16.0 (pipecat-rabel 0.3.0 in both) | 176 [165, 188], 0.07 | 170 [159, 182], 0.07 |
+| The curve, after 0, 12, 24, 48, 100, 300 and 1,070 calls taught | silent, 61, 125, 151, 149, 163, 174 | silent, 9, 44, 72, 94, 102, 118 |
 
 - **ms a turn sooner** is how much sooner the reply's LLM call starts, averaged over every turn of the 376 test calls, with a 95%
-  interval by whole calls. Both hosts hold an early reply until the turn ends, so the caller hears less than that. In one
-  reading with Claude Haiku 5.5 and Deepgram Aura-2, the first audio came 115 ms a turn sooner under LiveKit's default, about 142
-  with Bell alone in LiveKit, and 133 in Pipecat. That figure moves with the reply model's speed from hour to hour.
-- Both runs passed the control first: `demo-bank` answered 741 guesses, 586 of them right.
-- The rerun reads a few ms higher because the API answered sooner than the stand-in did. A run from farther away reads lower.
-- The rerun was made before the API's public launch, against the same code on Rabel's test address, with both packages built
-  from their public commits. Its reply and voice were the stand-in, so it gives no first-audio reading.
+  interval by whole calls. Both hosts hold an early reply until the turn ends, so the caller hears less than that. In this run's
+  reading with Claude Haiku 5.5 and Deepgram Aura-2, the first audio came 141 ms a turn sooner with Bell under LiveKit's default
+  (a median of 952 ms from the caller's last word, against 1,054 without Bell), 227 with Bell alone in LiveKit, and 125 in Pipecat.
+  That figure moves with the reply model's speed from hour to hour; this one was read at 05:00 UTC.
+- 1.9.0 gets a newer Bell from the API, which guesses on more turns. It starts replies sooner and costs more LLM calls a turn than
+  1.8.13 did. `pipecat-rabel` 0.3.0 still gets the earlier Bell, so Pipecat's row is about where it was.
+- The control passed first: `demo-bank` answered 741 guesses, 586 of them right, asked as 1.8.13 asks. Asked as 1.9.0 asks, it
+  answered 2,341 guesses, 1,239 of them right.
+- The 1.8.13 numbers were read with a stand-in for the API. A rerun of them against the API on 22 November 2026 read a few ms
+  higher (122 for the first row), because the API answered sooner than the stand-in did. A run from farther away reads lower.
 
 ## The limits
 
@@ -36,8 +40,8 @@ Rabel's published numbers, and a rerun of this repository's scripts and data on 
   nothing was tuned on them. The curve shows what fewer calls give.
 - **No speech-to-text's own early start.** Flux's eager end of turn was off in every row.
 - **Where you run it matters.** Bell's answer reaches the replay after the API's real round trip from your machine.
-- **Two passes are not identical with Bell.** Its answers come through the network, so the same arm run twice differed by 3 ms
-  a turn in the rerun, on 164 of 2,193 turns.
+- **Two passes are not identical with Bell.** Its answers come through the network, so the same arm run twice differed by 1.4 ms
+  a turn in the run of 26 November, on 383 of 2,193 turns.
 
 ## Get the data folder
 
@@ -82,7 +86,7 @@ Estimates from Rabel's own runs in November 2026; yours depend on your machine a
 - **A full run:** about four hours on one 8-core machine (a run split over three such machines took 54, 117 and 74 minutes). One
   full run, with its dry runs and a stopped first attempt, used about 2,600 minutes of a test account's conversation time, most of
   it Pipecat's calls, which hold a conversation open for the whole call. `PIPECAT=0` leaves them out.
-- **`LIVE=1`:** about $10 to $12 of Claude Haiku 5.5 and Aura-2 when every reply's words are measured. `LIVE_MAX_USD` (30 by
+- **`LIVE=1`:** about $7 to $12 of Claude Haiku 5.5 and Aura-2 when every reply's words are measured. `LIVE_MAX_USD` (30 by
   default) stops it.
 - **The curve's agents stay in your account,** named `<AGENT_PREFIX>-c<N>`. Delete each with `DELETE /v1/agents/{agent}` when you
   are done. A run never teaches an agent that already has calls.
@@ -115,9 +119,11 @@ Estimates from Rabel's own runs in November 2026; yours depend on your machine a
   sends a `ping`; the API answers it with `pong` once every answer to the messages before it has gone out, so once the `pong` is
   back every answer to the `heard` is in. The `pong` is never shown to the hookup.
 - **The control, first.** Before any replay, the 28 test callers' calls are sent to the ready-made agent `demo-bank`: it must answer
-  741 guesses, 586 of them right. The agent this run teaches all 1,070 calls must then guess exactly as `demo-bank` does. If the
-  control fails (`CONTROL_FAILS`), the API's `demo-bank` does not answer as it did when this benchmark was made, or the address in
-  `RABEL_API_URL` does not serve the API's version 2; nothing is replayed and no table is written.
+  741 guesses, 586 of them right. Sent again as `livekit-plugins-rabel` 1.9.0 asks (the API's version 3), it must answer 2,341
+  guesses, 1,239 of them right (`DEMO_V3_WANT` in `run.sh`). The agent this run teaches all 1,070 calls must then guess exactly as
+  `demo-bank` does. If a control fails (`CONTROL_FAILS`, `CONTROL_V3_FAILS`), the API's `demo-bank` does not answer as it did when
+  this benchmark was made, or the address in `RABEL_API_URL` does not serve the API's versions 2 and 3; nothing is replayed and no
+  table is written.
 - **Intervals** are 95%, from 2,000 resamples of whole calls.
 
 ## What is here
