@@ -65,7 +65,7 @@ LK_AGENTS='livekit-agents[deepgram]==1.8.13'
 PC_AI='pipecat-ai[deepgram]==1.16.0'
 HOOKUP_LK_PIN='livekit-plugins-rabel==1.9.0'
 # demo-bank's version 3 check (the new Bell): every guess sent and the turns right, once read on the API at its release
-DEMO_V3_WANT=${DEMO_V3_WANT:-}
+DEMO_V3_WANT=${DEMO_V3_WANT:-2341,1239}
 HOOKUP_PC_PIN='pipecat-rabel==0.3.0'
 PY_PINS='numpy==2.5.5 anthropic==2.11.0 websockets==17.4'
 PC_PINS='numpy==2.5.5 websockets==17.4'
