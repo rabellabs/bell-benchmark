@@ -212,8 +212,13 @@ class ApiBell:
             await ws.send_str(json.dumps(conv.ready))
             c.bell_ready.set()
             loop = asyncio.get_running_loop()
-            guessed = False                   # the API sends at most one guess a turn: once it has, the rest of the turn's heard
-            async for msg in ws:              # messages are passed on without waiting for an answer
+            # A version 1 or 2 conversation (a hookup up to 1.8.13) gets at most one guess a turn: once it has had it, the rest of
+            # the turn's heard messages are passed on without waiting for an answer. A version 3 conversation (the new Bell, the
+            # hookup's 1.9.0) can get more than one guess a turn, so every heard message waits for all of its answers.
+            one_guess = int(conv.ready.get("v") or 2) < 3
+            API_STATS[f"ready_v{conv.ready.get('v')}"] += 1
+            guessed = False
+            async for msg in ws:
                 if msg.type != aiohttp.WSMsgType.TEXT:
                     break
                 m = json.loads(msg.data)
@@ -221,7 +226,7 @@ class ApiBell:
                 if kind == "heard":
                     c.heard += 1
                     API_STATS["heard"] += 1
-                    if guessed:
+                    if guessed and one_guess:
                         conv.send(m)
                         continue
                     for rt, ans in conv.ask(m):

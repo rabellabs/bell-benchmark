@@ -110,8 +110,8 @@ def watch_bell_emits():
     from livekit.plugins.rabel import stt as _RS
     orig = _RS.SpeechStream._take_guess
 
-    def _take(self, m):
-        ev = orig(self, m)
+    def _take(self, m, *a, **kw):   # the hookup also takes a guess again (`released=`: rule 8's held guess, 1.9.0's waiting one)
+        ev = orig(self, m, *a, **kw)
         c = BELL_BY_STT.get(id(self._rstt))
         if ev is not None and c is not None:
             c.bell_emits.append((time.time(), ev.alternatives[0].text))

@@ -9,7 +9,9 @@
 #      Deepgram service and pipecat-rabel; every version pinned below); the 28 test callers' caller audio from the public repository
 #      of the Gridspace-Stanford Harper Valley dataset (CC BY 4.0).
 #   2. the control through the Rabel API, first, and it gates everything: the 28 test callers' 376 calls sent to the ready-made agent
-#      demo-bank ("learn": false) must read 741 guesses, 586 of them right (bench/api_control.py).
+#      demo-bank ("learn": false) must read 741 guesses, 586 of them right (bench/api_control.py). Then the same calls with a version 3
+#      hello, as livekit-plugins-rabel 1.9.0 asks, which gets the new Bell: its two numbers (every guess sent, the turns right) must
+#      read DEMO_V3_WANT (set below); while DEMO_V3_WANT is empty they are read and written down, not checked.
 #   3. the curve's agents: new agents of your account taught the first 0, 12, 24, 48, 100, 300 and all 1,070 of the 27 known callers'
 #      calls through POST /v1/agents/{agent}/calls (bench/teach.py); the agent taught all of them must guess exactly as demo-bank does
 #      on the 28 (the control again, turn by turn).
@@ -61,7 +63,9 @@ HVB_COMMIT=0bd721e877c4a85d8c13ff837e68661ea6200a98
 # the versions every run installs (a later release of a host or a hookup can change what is measured)
 LK_AGENTS='livekit-agents[deepgram]==1.8.13'
 PC_AI='pipecat-ai[deepgram]==1.16.0'
-HOOKUP_LK_PIN='livekit-plugins-rabel==1.8.13'
+HOOKUP_LK_PIN='livekit-plugins-rabel==1.9.0'
+# demo-bank's version 3 check (the new Bell): every guess sent and the turns right, once read on the API at its release
+DEMO_V3_WANT=${DEMO_V3_WANT:-}
 HOOKUP_PC_PIN='pipecat-rabel==0.3.0'
 PY_PINS='numpy==2.5.5 anthropic==2.11.0 websockets==17.4'
 PC_PINS='numpy==2.5.5 websockets==17.4'
@@ -113,6 +117,13 @@ EOF
     > $LG/api_control.log 2>&1
   tail -n 2 $LG/api_control.log > $ST/CONTROL; cat $ST/CONTROL
   grep -q API_CONTROL_PASSES $ST/CONTROL || stop CONTROL_FAILS
+  # the same with a version 3 hello (the new Bell, as the hookup 1.9.0 asks): read, and checked against DEMO_V3_WANT when it is set
+  VW=""; [ -n "$DEMO_V3_WANT" ] && VW="--want $DEMO_V3_WANT"
+  $VPY bench/api_control.py --streams $DATA/streams_28.json --agent demo-bank --v 3 $VW --out $OUT/api_control_demo-bank_v3.json \
+    > $LG/api_control_v3.log 2>&1
+  { tail -n 2 $LG/api_control_v3.log; [ -n "$DEMO_V3_WANT" ] || echo "(version 3: read, not checked: DEMO_V3_WANT is not set)"; } \
+    > $ST/CONTROL_V3; cat $ST/CONTROL_V3
+  grep -q API_CONTROL_PASSES $ST/CONTROL_V3 || stop CONTROL_V3_FAILS
   # 3. the curve's agents, and the one taught everything read against demo-bank
   PFX=${AGENT_PREFIX:-bench-$(date +%s)}
   echo "$PFX" > $ST/AGENT_PREFIX

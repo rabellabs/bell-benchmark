@@ -269,6 +269,7 @@ def main():
     w("")
     w("```")
     w(txt(st / "CONTROL"))
+    w(txt(st / "CONTROL_V3"))
     w(txt(st / "TEACH"))
     w(txt(st / "API_FAULTS"))
     w("```")
