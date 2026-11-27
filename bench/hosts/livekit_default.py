@@ -26,9 +26,13 @@ import time
 import wave
 
 
-def session_for(stt_obj, llm, call):
+def session_for(stt_obj, llm, call, max_retries=0):
     from livekit.agents import AgentSession
-    # LiveKit's defaults: nothing but the STT and the LLM given (the default VAD and audio turn detector, preemptive generation on)
+    # LiveKit's defaults: nothing but the STT and the LLM given (the default VAD and audio turn detector, preemptive generation on);
+    # max_retries, when set, is the one setting changed: the early starts preemptive generation may make in a turn (LiveKit's
+    # default 3; livekit-plugins-rabel's README sets 4 with Bell on)
+    if max_retries:
+        return AgentSession(stt=stt_obj, llm=llm, turn_handling={"preemptive_generation": {"max_retries": max_retries}})
     return AgentSession(stt=stt_obj, llm=llm)
 
 

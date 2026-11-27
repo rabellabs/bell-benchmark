@@ -127,7 +127,11 @@ def main():
           + (f"Only the {a.calls} shortest calls were replayed." if a.calls != "0" else ""))
         w("")
     api = api_summary(out)
-    w(f"- Configuration: LiveKit Agents 1.8.13 at its defaults; Pipecat 1.16.0; Bell's guesses from the Rabel API at {api['url']} "
+    mr = (rd(out / "flux_lk_1.jsonl.meta.json") or {}).get("max_retries")
+    w(f"- Configuration: LiveKit Agents 1.8.13 at its defaults"
+      + (f" but one, preemptive generation's max_retries {mr} in every LiveKit arm (LiveKit's default is 3)" if mr else "")
+      + "; "
+      f"Pipecat 1.16.0; Bell's guesses from the Rabel API at {api['url']} "
       f"(the ready-made agent `demo-bank`, and for the curve new agents of this run's account taught the 27 known callers' calls through "
       f"`POST /v1/agents/{{agent}}/calls`), every conversation with \"learn\": false; the hookups `livekit-plugins-rabel` "
       f"{(txt(out.parent / 'lkr' / 'HOOKUP_COMMIT') or '?').split(' ')[0]} and `pipecat-rabel` "
@@ -212,6 +216,17 @@ def main():
     w("")
     w("One line each:")
     L.extend(lines)
+    bl = rd(R / "baseline_flux.json")
+    if bl:
+        pd = bl["paired"]
+        x = bl["turn_by_turn"]
+        w("")
+        w(f"- {bl['label']}: LiveKit alone {iv(bl['arms']['lk_default']['ms_sooner_a_turn'])} ms sooner a turn at the default, "
+          f"{iv(bl['arms']['lk']['ms_sooner_a_turn'])} with the lead table's setting; the change {iv(pd['ms_sooner_a_turn'], 2, True)} ms "
+          f"a turn, {iv(pd['llm_calls_a_turn'], 4, True)} LLM calls; turns sooner {x['won']}, the same {x['tied']:,}, later {x['lost']}.")
+        flat["baseline.flux.ms"] = pd["ms_sooner_a_turn"]
+        flat["baseline.flux.calls"] = pd["llm_calls_a_turn"]
+        flat["baseline.flux.turns"] = x
     w("")
     w("### How LiveKit's default ending behaves on these calls (LiveKit alone)")
     w("")
@@ -352,7 +367,7 @@ def main():
     w("")
     w(f"Sizes: {sizes}; calls replayed: {'all' if a.calls == '0' else a.calls + ' shortest'}; passes {a.passes}.")
     (out / "TABLE.md").write_text("\n".join(L) + "\n", encoding="utf-8")
-    (out / "TABLE.json").write_text(json.dumps({"mock": mock, "calls": a.calls, "numbers": flat, "live_rate_limits": rate_info, "api": api,
+    (out / "TABLE.json").write_text(json.dumps({"mock": mock, "calls": a.calls, "max_retries": mr or 3, "numbers": flat, "live_rate_limits": rate_info, "api": api,
                                                 "live": ls},
                                                indent=1), encoding="utf-8")
     print(f"TABLE {len(flat)} numbers -> {out / 'TABLE.md'}")

@@ -344,6 +344,14 @@ def plant_detector_fault(ms):
 
 
 async def run_call(clip, turns, a, classes, bell):
+    # each call runs as LiveKit runs an agent, inside a job (LiveKit's own fake one, no worker and no room), so the hookup reads
+    # the session's settings from the job's primary session as it does in a deployed agent
+    from livekit.agents.testing import fake_job_context
+    with fake_job_context(job_id=f"bench-{clip}"):
+        return await _run_call(clip, turns, a, classes, bell)
+
+
+async def _run_call(clip, turns, a, classes, bell):
     import aiohttp
     from livekit.agents import Agent
     import livekit_default as LD
@@ -372,11 +380,14 @@ async def run_call(clip, turns, a, classes, bell):
         llm = StubLLM()
         if a.turn == "stt":   # Flux's own end of turn, no VAD, no audio
             from livekit.agents import AgentSession, TurnHandlingOptions
-            session = AgentSession(stt=stt_obj, vad=None, llm=llm, turn_handling=TurnHandlingOptions(turn_detection="stt"))
+            th = TurnHandlingOptions(turn_detection="stt")
+            if a.max_retries:
+                th["preemptive_generation"] = {"max_retries": a.max_retries}
+            session = AgentSession(stt=stt_obj, vad=None, llm=llm, turn_handling=th)
             VH.SESSIONS[id(session)] = c
             session.input.audio = classes[1]()
         else:
-            session = LD.session_for(stt_obj, llm, c)
+            session = LD.session_for(stt_obj, llm, c, a.max_retries)
             VH.SESSIONS[id(session)] = c
             session.input.audio = LD.audio_input(turns[0]["path"], c)
         await session.start(agent=Agent(instructions="You answer a bank's callers."))
@@ -556,6 +567,7 @@ def main():
     ap.add_argument("--fresh", action="store_true", help="each call in a new process of its own")
     ap.add_argument("--hookup-offset-check", action="store_true", help="a check of a cause, never a reading: see hookup_offset_check")
     ap.add_argument("--hookup-label", default="", help="which livekit-plugins-rabel commit is installed (recorded in the meta)")
+    ap.add_argument("--max-retries", type=int, default=0, help="preemptive generation's max_retries (0: LiveKit's default, 3)")
     a = ap.parse_args()
     if a.arm not in ARMS[a.turn]:
         raise SystemExit(f"--turn {a.turn} has the arms {ARMS[a.turn]}")
@@ -595,7 +607,7 @@ def main():
         faults.update(r["faults"])
     meta = {"host": "livekit_default", "turn": a.turn, "eager": a.eager if a.arm in EAGER_ARMS else None, "clock": a.clock, "vendor": a.vendor, "arm": a.arm, "agent": a.agent if a.arm in BELL_ARMS else None, "events": a.events,
             "fault_detector_ms": a.fault_detector_ms, "hookup_offset_check": a.hookup_offset_check, "fresh": a.fresh,
-            "hookup_label": a.hookup_label, "calls": len(clips), "turns": sum(r["rows"] for r in res),
+            "hookup_label": a.hookup_label, "max_retries": a.max_retries or None, "calls": len(clips), "turns": sum(r["rows"] for r in res),
             "load_counts": dict(cnt), "faults": dict(faults), "wall_s": round(time.time() - t0, 1), "procs": procs,
             "conc": a.conc if a.clock == "wall" else 1, "by_process": res}
     if a.arm in BELL_ARMS:

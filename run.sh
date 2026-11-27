@@ -32,6 +32,8 @@
 #   376; N = the N shortest, a dry run), CURVE_NS (0,12,24,48,100,300), AGENT_PREFIX (bench-<time>: the curve's agents' names),
 #   PIPECAT (1), PC_AT_ONCE (40: Pipecat's calls at once, each a conversation with the API; your key's limit is
 #   50), LIVE (0), LIVE_CACHE, REPS (2), LIVE_CONC (8), LIVE_MAX_USD (30), LIVE_MAX_REQ (20000), PACE_S (3600),
+#   LK_MAX_RETRIES (preemptive generation's max_retries in every LiveKit arm; empty: LiveKit's default, 3; set, the lead table
+#   also replays LiveKit alone at the default, to show the baseline does not move),
 #   HOOKUP_LK (pip spec of livekit-plugins-rabel, default the release pinned below) and HOOKUP_LK_LABEL, HOOKUP_PC and HOOKUP_PC_LABEL
 #   likewise for pipecat-rabel, PART (all | setup | table), ARMS (lead,curve,ends: which replays this machine runs; a run split over
 #   machines gives each its part, every machine runs the control first, only the one with curve teaches).
@@ -52,6 +54,7 @@ CURVE_NS=${CURVE_NS:-0,12,24,48,100,300}
 PIPECAT=${PIPECAT:-1}
 PC_AT_ONCE=${PC_AT_ONCE:-40}
 LIVE=${LIVE:-0}
+MR=${LK_MAX_RETRIES:-0}
 VPY=$WORK/lkv/bin/python
 PPY=$WORK/pcv/bin/python
 EVF=$DATA/flux28_events.jsonl
@@ -76,7 +79,7 @@ stop() { say "STOP $1"; echo "$1" > $ST/END; exit 1; }
 export RABEL_API_URL=${RABEL_API_URL:-https://api.rabellabs.com}
 date -u +%FT%TZ > $ST/START
 rm -f $ST/END
-say "the benchmark: PART=$PART ARMS=$ARMS API=$RABEL_API_URL DATA=$DATA PASSES=$NP PROCS=$P CALLS=${CALLS:-0} CURVE_NS=$CURVE_NS PIPECAT=$PIPECAT LIVE=$LIVE"
+say "the benchmark: LK_MAX_RETRIES=${MR} PART=$PART ARMS=$ARMS API=$RABEL_API_URL DATA=$DATA PASSES=$NP PROCS=$P CALLS=${CALLS:-0} CURVE_NS=$CURVE_NS PIPECAT=$PIPECAT LIVE=$LIVE"
 
 if [ "$PART" = all ] || [ "$PART" = setup ]; then
   # 0. the data, checked against its manifest
@@ -148,7 +151,7 @@ HK=$(cat $WORK/lkr/HOOKUP_COMMIT); PHK=$(cat $WORK/pcr/HOOKUP_COMMIT)
 host() {  # host <turn> <vendor> <arm> <out> [extra]
   turn=$1; v=$2; arm=$3; o=$4; shift 4
   $VPY bench/hosts/livekit_default_host.py --turn $turn --vendor $v --events $EVF --sched $SCH --audio $AUD --arm $arm \
-    --out $OUT/$o.jsonl --procs $P --hookup-label "$HK" $CL "$@" > $LG/$o.log 2>&1
+    --out $OUT/$o.jsonl --procs $P --hookup-label "$HK" --max-retries $MR $CL "$@" > $LG/$o.log 2>&1
   say "$o: $(tail -n 2 $LG/$o.log | head -n 1 | cut -c1-300)"
   grep -q LIVEKIT_DEFAULT_HOST_DONE $LG/$o.log || stop "HOST_FAILED $o"
 }
@@ -172,6 +175,9 @@ if has lead; then
   rep flux_lk_1 flux_lk_2 "flux: LiveKit's default alone, run twice"
   rep flux_bell_1 flux_bell_2 "flux: with Bell, run twice"
   rep flux_lk_1 flux_bell_1 "flux: alone against with Bell" flux_bell_1
+  if [ "$MR" != 0 ]; then   # LiveKit alone at its default max_retries: the baseline's own check
+    for r in $(seq 1 $NP); do host livekit flux lk flux_lkd_$r --max-retries 0; done
+  fi
 fi
 if has curve; then
   for n in ${CURVE_NS//,/ }; do
@@ -252,6 +258,10 @@ cmb() {  # cmb <name> <label> <armA>=<prefix> <armB>=<prefix>
     --json $OUT/reads/$n.json > $LG/read_$n.log 2>&1 || stop "READ_FAILED $n"
   cat $LG/read_$n.log >> $LG/reads.txt
 }
+if has lead && [ "$MR" != 0 ]; then
+  $VPY bench/e2e/combine.py read --pass lk_default=$(passes flux_lkd) --pass lk=$(passes flux_lk)     --label "LiveKit's default alone at max_retries 3 against at $MR" --json $OUT/reads/baseline_flux.json > $LG/read_baseline.log 2>&1     || stop "READ_FAILED baseline_flux"
+  cat $LG/read_baseline.log >> $LG/reads.txt
+fi
 has lead && cmb lead_flux "flux words, LiveKit's default ending, eager off" lk=flux_lk lk_bell=flux_bell
 has ends && cmb fc_bell "Flux's end of turn: Bell alone against nothing" nothing=fc_nothing bell=fc_bell
 has ends && [ "$PIPECAT" = 1 ] && cmb pc_bell "Pipecat, Flux's end of turn: Bell alone against nothing" nothing=pc_nothing bell=pc_bell
