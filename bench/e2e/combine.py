@@ -140,6 +140,29 @@ def first_audio_of(an, m):
     return max(an["commit_ms"], an["start_ms"] + m["first_audio"])
 
 
+def turn_by_turn(per, names, keys, e2e=None):
+    """each turn against the first arm, by its ms sooner averaged over the passes: won (the second arm's reply started sooner),
+    tied, lost; the gain on a won turn; and, with the live part, last word to first audio on the won turns in each arm"""
+    import statistics
+    A, B = names
+    d = {k: per[B]["ms"][k] - per[A]["ms"][k] for k in keys}
+    won = [k for k in keys if d[k] > 1e-9]
+    lost = [k for k in keys if d[k] < -1e-9]
+    out = {"turns": len(keys), "won": len(won), "tied": len(keys) - len(won) - len(lost), "lost": len(lost),
+           "won_gain_ms_mean": statistics.mean(d[k] for k in won) if won else None,
+           "won_gain_ms_median": statistics.median(d[k] for k in won) if won else None,
+           "lost_ms_mean": statistics.mean(d[k] for k in lost) if lost else None}
+    if e2e:
+        wk = [k for k in won if k in e2e[A] and k in e2e[B]]
+        if wk:
+            out["won_last_word_to_first_audio_ms"] = {
+                "turns": len(wk), "alone_median": statistics.median(e2e[A][k] for k in wk),
+                "with_median": statistics.median(e2e[B][k] for k in wk),
+                "sooner_mean": statistics.mean(e2e[A][k] - e2e[B][k] for k in wk),
+                "sooner_median": statistics.median(e2e[A][k] - e2e[B][k] for k in wk)}
+    return out
+
+
 def cmd_read(a):
     import statistics
     arms = load_passes(a.passes)
@@ -242,6 +265,8 @@ def cmd_read(a):
                 xs = sorted(m[fld] for m in lv if m.get(fld) is not None)
                 if xs:
                     res.setdefault("live_ms", {})[fld] = {"n": len(xs), "median": xs[len(xs) // 2], "p95": xs[int(len(xs) * 0.95)]}
+    if len(names) == 2:
+        res["turn_by_turn"] = turn_by_turn(per, names, keys, e2e if a.live else None)
     pathlib.Path(a.json).write_text(json.dumps(res, indent=1), encoding="utf-8")
     for arm, f in res["arms"].items():
         ln = (f"{a.label} {arm}: {f['llm_calls_a_turn']['mean']:.4f} calls a turn, {f['ms_sooner_a_turn']['mean']:.2f} ms sooner a turn "

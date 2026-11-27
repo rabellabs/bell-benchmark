@@ -286,6 +286,27 @@ def main():
           f"{iv(pd['ms_sooner_a_turn'], 2, True)} |")
         flat[f"curve.{n}.ms"] = pd["ms_sooner_a_turn"]
         flat[f"curve.{n}.calls"] = pd["llm_calls_a_turn"]
+    for v in STTS:
+        tb = (rd(R / f"lead_{v}.json") or {}).get("turn_by_turn")
+        if not tb:
+            continue
+        w("")
+        w(f"### Turn by turn: with Bell against LiveKit's default alone ({v}'s words)")
+        w("")
+        w(f"- Each turn's ms sooner, averaged over the passes: Bell's reply started sooner on {tb['won']:,} of {tb['turns']:,} turns "
+          f"(won), by a mean {f2(tb['won_gain_ms_mean'], 0)} ms (median {f2(tb['won_gain_ms_median'], 0)}); the same on {tb['tied']:,}; "
+          f"later on {tb['lost']:,}, by a mean {f2(-tb['lost_ms_mean'], 0) if tb['lost_ms_mean'] is not None else '–'} ms.")
+        e = tb.get("won_last_word_to_first_audio_ms")
+        if e:
+            w(f"- On the won turns with a live measurement ({e['turns']:,}): last word to first audio a median {f2(e['alone_median'], 0)} ms "
+              f"alone and {f2(e['with_median'], 0)} with Bell; the first audio {f2(e['sooner_mean'], 0)} ms sooner on average "
+              f"(median {f2(e['sooner_median'], 0)})" + (" (DRY RUN, not a reading)" if mock else "") + ".")
+        flat[f"turns.{v}"] = tb
+        t0 = (rd(R / "curve_0.json") or {}).get("turn_by_turn")
+        if t0:
+            w(f"- The same read with Bell sending no guess (the agent taught no call): sooner on {t0['won']:,}, the same on "
+              f"{t0['tied']:,}, later on {t0['lost']:,} (the replay's own movement between arms).")
+            flat["turns.silent"] = t0
     w("")
     w("### Turns where the reply started later than with LiveKit alone (Flux's words, LiveKit's default ending)")
     w("")
