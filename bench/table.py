@@ -71,6 +71,33 @@ def api_summary(out):
     return {"url": url or "?", "n": len(rts), "p50": q(0.5), "p90": q(0.9), "p99": q(0.99)}
 
 
+def later_turns(out, arm, passes, base="flux_lk"):
+    """turns on which the reply's LLM call started later than with LiveKit alone in every pass of both arms (the replay's
+    `answer.start_ms`, from the vendor's end of turn); turns where a pass has no answering reply are not counted"""
+    def rows(name, i):
+        p = pathlib.Path(out) / f"{name}_{i}.jsonl"
+        if not p.exists():
+            return None
+        return {r["key"]: r for r in (json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x.strip())}
+    ps = range(1, int(passes) + 1)
+    A = [rows(base, i) for i in ps]
+    B = [rows(arm, i) for i in ps]
+    if any(x is None for x in A + B):
+        return None
+    st = lambda r: (r.get("answer") or {}).get("start_ms")  # noqa: E731
+    later, read = [], 0
+    for k in A[0]:
+        sa = [st(x.get(k, {})) for x in A]
+        sb = [st(x.get(k, {})) for x in B]
+        if None in sa + sb:
+            continue
+        read += 1
+        if min(sb) > max(sa):
+            later.append(min(sb) - max(sa))
+    later.sort()
+    return {"turns": len(later), "of": read, "median_ms": round(later[len(later) // 2]) if later else None}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
@@ -259,6 +286,21 @@ def main():
           f"{iv(pd['ms_sooner_a_turn'], 2, True)} |")
         flat[f"curve.{n}.ms"] = pd["ms_sooner_a_turn"]
         flat[f"curve.{n}.calls"] = pd["llm_calls_a_turn"]
+    w("")
+    w("### Turns where the reply started later than with LiveKit alone (Flux's words, LiveKit's default ending)")
+    w("")
+    w("A turn counts when the reply's LLM call started later in every pass than in every pass of LiveKit alone, by the replay's "
+      "reply start. The agent taught no call sends no guess at all: what it shows is the replay's own count with Bell switched on "
+      "and silent, the floor Bell's count is read against.")
+    w("")
+    for arm, name, key in (("flux_bell", "with Bell (demo-bank)", "later.flux.bell"),
+                           ("curve_0", "with Bell sending no guess (the agent taught no call)", "later.flux.silent")):
+        d = later_turns(out, arm, a.passes)
+        if d is None:
+            w(f"- {name}: not read")
+            continue
+        w(f"- {name}: {d['turns']} of {d['of']:,} turns" + (f", later by a median {d['median_ms']} ms" if d["turns"] else ""))
+        flat[key] = d
     w("")
     w("### Notes")
     w("")
