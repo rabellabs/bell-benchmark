@@ -245,6 +245,8 @@ def main():
               + f" ({d['calls']} calls, {d['turns_read']} turns).")
             flat["fc.bell_vs_nothing.ms"] = pd["ms_sooner_a_turn"]
             flat["fc.bell_vs_nothing.calls"] = pd["llm_calls_a_turn"]
+            if pd.get("last_word_to_first_audio_ms"):
+                flat["fc.bell_vs_nothing.e2e"] = pd["last_word_to_first_audio_ms"]
     if pipecat_on:
         d = rd(R / "pc_bell.json")
         w("")
