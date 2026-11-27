@@ -9,24 +9,30 @@ Bell's guesses come from the Rabel API itself, with your key. Nothing in this re
 
 ## The results
 
-A run of this repository's scripts and data on 26 November 2026, against the Rabel API's public address with
-`livekit-plugins-rabel` 1.9.0 from PyPI, beside the numbers Rabel published for 1.8.13.
+A run of this repository's scripts and data on <!-- n:run -->27 November 2026<!-- /n -->, against the Rabel API's public address with
+`livekit-plugins-rabel` <!-- n:hookup -->1.9.0.1<!-- /n --> (built from the commit released to PyPI), beside the numbers Rabel published for 1.8.13.
 
-| | livekit-plugins-rabel 1.9.0, 26 November 2026 | 1.8.13, Rabel's published run |
+| | livekit-plugins-rabel <!-- n:hookup -->1.9.0.1<!-- /n -->, <!-- n:run -->27 November 2026<!-- /n --> | 1.8.13, Rabel's published run |
 |---|---|---|
-| Bell's answer time | the API's real round trip, median 3.6 ms, from a machine in the API's own cloud region | about 32 ms, from a stand-in for the API inside the process |
-| LiveKit's default alone, then with Bell | 174 ms a turn sooner [161, 186], 0.41 more LLM calls a turn | 118 [108, 128], 0.11 |
-| Bell alone against no early start, in LiveKit | 270 [256, 284], 0.31 | 161 [150, 172], 0.09 |
-| Bell alone against no early start, in Pipecat 1.16.0 (pipecat-rabel 0.3.0 in both) | 176 [165, 188], 0.07 | 170 [159, 182], 0.07 |
-| The curve, after 0, 12, 24, 48, 100, 300 and 1,070 calls taught | silent, 61, 125, 151, 149, 163, 174 | silent, 9, 44, 72, 94, 102, 118 |
+| Bell's answer time | the API's real round trip, median <!-- n:answer_ms -->3.2<!-- /n --> ms, from a machine in the API's own cloud region | about 32 ms, from a stand-in for the API inside the process |
+| LiveKit's default alone, then with Bell | <!-- n:ms -->172<!-- /n --> ms a turn sooner <!-- n:ms_ci_br -->[159, 184]<!-- /n -->, <!-- n:calls_added -->0.41<!-- /n --> more LLM calls a turn | 118 [108, 128], 0.11 |
+| Bell alone against no early start, in LiveKit | <!-- n:alone_ms -->270<!-- /n --> <!-- n:alone_ci_br -->[256, 284]<!-- /n -->, <!-- n:alone_calls_added -->0.31<!-- /n --> | 161 [150, 172], 0.09 |
+| Bell alone against no early start, in Pipecat 1.16.0 (pipecat-rabel 0.3.0 in both) | <!-- n:pc_ms -->176<!-- /n --> <!-- n:pc_ci_br -->[165, 188]<!-- /n -->, <!-- n:pc_calls_added -->0.07<!-- /n --> | 170 [159, 182], 0.07 |
+| The curve, after 0, 12, 24, 48, 100, 300 and 1,070 calls taught | silent, <!-- n:curve_12 -->60<!-- /n -->, <!-- n:curve_24 -->123<!-- /n -->, <!-- n:curve_48 -->150<!-- /n -->, <!-- n:curve_100 -->149<!-- /n -->, <!-- n:curve_300 -->164<!-- /n -->, <!-- n:curve_all -->172<!-- /n --> | silent, 9, 44, 72, 94, 102, 118 |
 
+- **LiveKit's default**, in this run, is LiveKit's default ending with one setting changed in every LiveKit arm, alone and
+  with Bell: preemptive generation's `max_retries` <!-- n:max_retries -->4<!-- /n --> (LiveKit's default is 3), as
+  `livekit-plugins-rabel`'s README sets it with Bell on. The same run replays LiveKit alone at 3 too: the setting moves it
+  by <!-- n:baseline_ms -->+1.8<!-- /n --> ms a turn <!-- n:baseline_ci_br -->[+0.6, +3.3]<!-- /n -->.
 - **ms a turn sooner** is how much sooner the reply's LLM call starts, averaged over every turn of the 376 test calls, with a 95%
   interval by whole calls. Both hosts hold an early reply until the turn ends, so the caller hears less than that. In this run's
-  reading with Claude Haiku 5.5 and Deepgram Aura-2, the first audio came 141 ms a turn sooner with Bell under LiveKit's default
-  (a median of 952 ms from the caller's last word, against 1,054 without Bell), 227 with Bell alone in LiveKit, and 125 in Pipecat.
-  That figure moves with the reply model's speed from hour to hour; this one was read at 05:00 UTC.
-- 1.9.0 gets a newer Bell from the API, which guesses on more turns. It starts replies sooner and costs more LLM calls a turn than
-  1.8.13 did. `pipecat-rabel` 0.3.0 still gets the earlier Bell, so Pipecat's row is about where it was.
+  reading with Claude Haiku 5.5 and Deepgram Aura-2, the first audio came <!-- n:audio_ms -->149<!-- /n --> ms a turn sooner with Bell under LiveKit's default
+  (a median of <!-- n:wait_all_with -->967<!-- /n --> ms from the caller's last word, against <!-- n:wait_all_alone -->1,067<!-- /n --> without Bell), <!-- n:alone_audio_ms -->230<!-- /n --> with Bell alone in LiveKit, and <!-- n:pc_audio_ms -->131<!-- /n --> in Pipecat.
+  That figure moves with the reply model's speed from hour to hour; this one was read at <!-- n:e2e_hours -->07:00 UTC<!-- /n -->.
+- **Turn by turn**, under LiveKit's default: Bell's reply started sooner on <!-- n:won_turns -->724<!-- /n --> of <!-- n:turns -->2,193<!-- /n --> turns, by <!-- n:won_ms -->525<!-- /n --> ms on
+  average. <!-- n:never_later_line -->In the public benchmark's run of 27 November 2026 with `livekit-plugins-rabel` 1.9.0.1 (376 scripted calls to one bank, 2,030 turns with a reply), no reply started later with Bell than without it.<!-- /n -->
+- 1.9.0 and later get a newer Bell from the API, which guesses on more turns. It starts replies sooner and costs more LLM calls a
+  turn than 1.8.13 did. `pipecat-rabel` 0.3.0 still gets the earlier Bell, so Pipecat's row is about where it was.
 - The control passed first: `demo-bank` answered 741 guesses, 586 of them right, asked as 1.8.13 asks. Asked as 1.9.0 asks, it
   answered 2,341 guesses, 1,239 of them right.
 - The 1.8.13 numbers were read with a stand-in for the API. A rerun of them against the API on 22 November 2026 read a few ms
@@ -40,8 +46,8 @@ A run of this repository's scripts and data on 26 November 2026, against the Rab
   nothing was tuned on them. The curve shows what fewer calls give.
 - **No speech-to-text's own early start.** Flux's eager end of turn was off in every row.
 - **Where you run it matters.** Bell's answer reaches the replay after the API's real round trip from your machine.
-- **Two passes are not identical with Bell.** Its answers come through the network, so the same arm run twice differed by 1.4 ms
-  a turn in the run of 26 November, on 383 of 2,193 turns.
+- **Two passes are not identical with Bell.** Its answers come through the network, so the same arm run twice differed by
+  <!-- n:rep_bell_ms -->0.5<!-- /n --> ms a turn in the run of <!-- n:run -->27 November 2026<!-- /n -->.
 
 ## Get the data folder
 

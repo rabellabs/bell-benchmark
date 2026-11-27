@@ -32,7 +32,7 @@
 #   376; N = the N shortest, a dry run), CURVE_NS (0,12,24,48,100,300), AGENT_PREFIX (bench-<time>: the curve's agents' names),
 #   PIPECAT (1), PC_AT_ONCE (40: Pipecat's calls at once, each a conversation with the API; your key's limit is
 #   50), LIVE (0), LIVE_CACHE, REPS (2), LIVE_CONC (8), LIVE_MAX_USD (30), LIVE_MAX_REQ (20000), PACE_S (3600),
-#   LK_MAX_RETRIES (preemptive generation's max_retries in every LiveKit arm; empty: LiveKit's default, 3; set, the lead table
+#   LK_MAX_RETRIES (preemptive generation's max_retries in every LiveKit arm, default 4; 0: LiveKit's default, 3; above 0, the lead table
 #   also replays LiveKit alone at the default, to show the baseline does not move),
 #   HOOKUP_LK (pip spec of livekit-plugins-rabel, default the release pinned below) and HOOKUP_LK_LABEL, HOOKUP_PC and HOOKUP_PC_LABEL
 #   likewise for pipecat-rabel, PART (all | setup | table), ARMS (lead,curve,ends: which replays this machine runs; a run split over
@@ -54,7 +54,7 @@ CURVE_NS=${CURVE_NS:-0,12,24,48,100,300}
 PIPECAT=${PIPECAT:-1}
 PC_AT_ONCE=${PC_AT_ONCE:-40}
 LIVE=${LIVE:-0}
-MR=${LK_MAX_RETRIES:-0}
+MR=${LK_MAX_RETRIES:-4}   # the published run's setting, as livekit-plugins-rabel's README sets it with Bell on; 0: LiveKit's default
 VPY=$WORK/lkv/bin/python
 PPY=$WORK/pcv/bin/python
 EVF=$DATA/flux28_events.jsonl
@@ -66,7 +66,7 @@ HVB_COMMIT=0bd721e877c4a85d8c13ff837e68661ea6200a98
 # the versions every run installs (a later release of a host or a hookup can change what is measured)
 LK_AGENTS='livekit-agents[deepgram]==1.8.13'
 PC_AI='pipecat-ai[deepgram]==1.16.0'
-HOOKUP_LK_PIN='livekit-plugins-rabel==1.9.0'
+HOOKUP_LK_PIN='livekit-plugins-rabel==1.9.0.1'
 # demo-bank's version 3 check (the new Bell): every guess sent and the turns right, once read on the API at its release
 DEMO_V3_WANT=${DEMO_V3_WANT:-2341,1239}
 HOOKUP_PC_PIN='pipecat-rabel==0.3.0'
