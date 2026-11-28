@@ -32,7 +32,8 @@ A run of this repository's scripts and data on <!-- n:run -->27 November 2026<!-
 - **Turn by turn**, under LiveKit's default: Bell's reply started sooner on <!-- n:won_turns -->724<!-- /n --> of <!-- n:turns -->2,193<!-- /n --> turns, by <!-- n:won_ms -->525<!-- /n --> ms on
   average. <!-- n:never_later_line -->In the public benchmark's run of 27 November 2026 with `livekit-plugins-rabel` 1.9.0.1 (376 scripted calls to one bank, 2,030 turns with a reply), no reply started later with Bell than without it.<!-- /n -->
 - 1.9.0 and later get a newer Bell from the API, which guesses on more turns. It starts replies sooner and costs more LLM calls a
-  turn than 1.8.13 did. `pipecat-rabel` 0.3.0 still gets the earlier Bell, so Pipecat's row is about where it was.
+  turn than 1.8.13 did. Pipecat's row was read with `pipecat-rabel` 0.3.0, which got the earlier Bell. 0.4.0
+  (28 November 2026) gets the new Bell and has not been measured here yet.
 - The control passed first: `demo-bank` answered 741 guesses, 586 of them right, asked as 1.8.13 asks. Asked as 1.9.0 asks, it
   answered 2,341 guesses, 1,239 of them right.
 - The 1.8.13 numbers were read with a stand-in for the API. A rerun of them against the API on 22 November 2026 read a few ms
