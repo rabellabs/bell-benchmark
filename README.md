@@ -154,6 +154,12 @@ The calls are from the Gridspace-Stanford Harper Valley dataset of simulated ban
 (https://creativecommons.org/licenses/by/4.0/). A run fetches the caller audio from that repository. The data folder's texts are
 Deepgram Flux's machine transcripts of that audio, changed in form for the replay.
 
+## Try Bell on your own calls
+
+[`try/`](try/) holds `try_bell.py`: point it at your own call transcripts with your own key. It teaches a new agent your
+earlier calls, plays your later ones through the live API, and reports how often Bell finished your callers' turns early. Your
+transcripts go only to the Rabel API in your own calls, and the agent it teaches is ready for a live install.
+
 LiveKit, Pipecat and Deepgram are named only to say what the benchmark runs. Rabel Labs is not affiliated with them.
 
 The code here is under the Apache License 2.0 (`LICENSE`).
